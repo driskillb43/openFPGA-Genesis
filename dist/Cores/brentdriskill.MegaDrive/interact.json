@@ -1,0 +1,88 @@
+{
+    "interact": {
+        "magic": "APF_VER_1",
+        "variables": [
+            {
+                "id": 0,
+                "name": "Audio Settings",
+                "type": "section"
+            },
+            {
+                "id": 1,
+                "address": "0x00A00000",
+                "name": "FM Chip",
+                "type": "checkbox",
+                "enabled": true,
+                "mask": 1,
+                "default": 0
+            },
+            {
+                "id": 2,
+                "address": "0x00F00000",
+                "name": "Audio Filter",
+                "type": "selection",
+                "enabled": true,
+                "mask": 3,
+                "default": 0,
+                "options": [
+                    {"value": 0, "name": "Model 1"},
+                    {"value": 1, "name": "Model 2"},
+                    {"value": 2, "name": "Minimal"},
+                    {"value": 3, "name": "No Filter"}
+                ]
+            },
+            {
+                "id": 3,
+                "name": "Video Settings",
+                "type": "section"
+            },
+            {
+                "id": 4,
+                "address": "0x00000020",
+                "name": "Composite Blend",
+                "type": "checkbox",
+                "enabled": true,
+                "mask": 1,
+                "default": 0
+            },
+            {
+                "id": 5,
+                "address": "0x00000030",
+                "name": "Sprite Limit",
+                "type": "checkbox",
+                "enabled": true,
+                "mask": 1,
+                "default": 1
+            },
+            {
+                "id": 6,
+                "name": "System Settings",
+                "type": "section"
+            },
+            {
+                "id": 7,
+                "address": "0x00000000",
+                "name": "Multitap",
+                "type": "checkbox",
+                "enabled": true,
+                "mask": 1,
+                "default": 0
+            },
+            {
+                "id": 8,
+                "address": "0x00C00000",
+                "name": "CPU Turbo",
+                "type": "selection",
+                "enabled": true,
+                "mask": 3,
+                "default": 0,
+                "options": [
+                    {"value": 0, "name": "Normal"},
+                    {"value": 1, "name": "2x"},
+                    {"value": 2, "name": "3x"},
+                    {"value": 3, "name": "4x"}
+                ]
+            }
+        ]
+    }
+}

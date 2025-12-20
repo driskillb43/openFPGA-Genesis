@@ -1,0 +1,45 @@
+{
+    "input": {
+        "magic": "APF_VER_1",
+        "controllers": [
+            {
+                "type": "default",
+                "mappings": [
+                    {
+                        "id": 1,
+                        "name": "MegaDrive 3-Button",
+                        "key": {
+                            "dpad_up": "D-Pad Up",
+                            "dpad_down": "D-Pad Down",
+                            "dpad_left": "D-Pad Left",
+                            "dpad_right": "D-Pad Right",
+                            "face_a": "B",
+                            "face_b": "C",
+                            "face_x": "A",
+                            "face_select": "Mode",
+                            "face_start": "Start"
+                        }
+                    },
+                    {
+                        "id": 2,
+                        "name": "MegaDrive 6-Button",
+                        "key": {
+                            "dpad_up": "D-Pad Up",
+                            "dpad_down": "D-Pad Down",
+                            "dpad_left": "D-Pad Left",
+                            "dpad_right": "D-Pad Right",
+                            "face_a": "B",
+                            "face_b": "C",
+                            "face_x": "A",
+                            "face_y": "Y",
+                            "trig_l1": "X",
+                            "trig_r1": "Z",
+                            "face_select": "Mode",
+                            "face_start": "Start"
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+}

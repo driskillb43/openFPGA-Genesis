@@ -1,0 +1,37 @@
+{
+    "variants": {
+        "magic": "APF_VER_1",
+        "variant_list": [
+            {
+                "name": "MegaDrive (NTSC)",
+                "id": 0,
+                "platform": {
+                    "category": "consoles",
+                    "name": "MegaDrive",
+                    "manufacturer": "Sega",
+                    "year": 1988
+                }
+            },
+            {
+                "name": "Genesis (NTSC)",
+                "id": 1,
+                "platform": {
+                    "category": "consoles",
+                    "name": "Genesis",
+                    "manufacturer": "Sega",
+                    "year": 1989
+                }
+            },
+            {
+                "name": "MegaDrive (PAL)",
+                "id": 2,
+                "platform": {
+                    "category": "consoles",
+                    "name": "MegaDrive",
+                    "manufacturer": "Sega",
+                    "year": 1990
+                }
+            }
+        ]
+    }
+}

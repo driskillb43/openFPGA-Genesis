@@ -1,0 +1,39 @@
+{
+    "data": {
+        "magic": "APF_VER_1",
+        "data_slots": [
+            {
+                "id": 1,
+                "name": "ROM",
+                "required": true,
+                "parameters": {
+                    "core_specific": false,
+                    "instance_specific": false
+                },
+                "extensions": [
+                    "bin",
+                    "gen",
+                    "md",
+                    "smd"
+                ],
+                "address": "0x10000000",
+                "size": "0x01000000"
+            },
+            {
+                "id": 2,
+                "name": "Save RAM",
+                "required": false,
+                "parameters": {
+                    "core_specific": false,
+                    "instance_specific": true
+                },
+                "extensions": [
+                    "sav",
+                    "srm"
+                ],
+                "address": "0x60000000",
+                "size": "0x00010000"
+            }
+        ]
+    }
+}
