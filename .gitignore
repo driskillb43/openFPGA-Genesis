@@ -1,0 +1,52 @@
+# Quartus files
+*.qws
+*.rpt
+*.summary
+*.smsg
+*.done
+*.jdi
+*.pin
+*.sld
+*.bak
+*.qar
+db/
+incremental_db/
+output_files/
+simulation/
+greybox_tmp/
+*.sof
+*.pof
+*.jic
+*.jam
+*.stp
+
+# Quartus generated
+*_generation_script*
+*.sopcinfo
+*.qip
+*.sip
+*.bsf
+*.ppf
+*.qsys
+.qsys_edit/
+
+# Build artifacts
+*.rbf
+*.rbf_r
+*.rpt.html
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Editor files
+.vscode/
+.idea/
+*.sublime-*
+
+# Temporary files
+tmp/
+temp/
