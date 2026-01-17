@@ -791,6 +791,8 @@ set_global_assignment -name VERILOG_FILE core/rtl/ym_lib.v
 set_global_assignment -name SYSTEMVERILOG_FILE core/sdram.sv
 set_global_assignment -name SYSTEMVERILOG_FILE core/md_io.sv
 set_global_assignment -name SYSTEMVERILOG_FILE core/lightgun.sv
+set_global_assignment -name SYSTEMVERILOG_FILE core/save_handler.sv
+set_global_assignment -name SYSTEMVERILOG_FILE core/cofi.sv
 
 # APF framework
 set_global_assignment -name QIP_FILE apf/apf.qip

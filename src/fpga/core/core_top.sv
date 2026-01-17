@@ -368,6 +368,9 @@ reg cs_sprite_limit       = 1;
 reg cs_multitap           = 0;
 reg [1:0] cs_cpu_turbo    = 0;
 
+// Save RAM size - configurable, default 64KB (matches data.json)
+wire [31:0] save_size = 32'd65536;
+
 always @(posedge clk_74a) begin
     if (bridge_wr) begin
         casex (bridge_addr)
@@ -424,36 +427,115 @@ synch_3 cart_download_s (
 );
 
 ///////////////////////////////////////////////////
+// Save RAM Handler
+///////////////////////////////////////////////////
+
+wire [31:0] save_bridge_rd_data;
+wire        bk_wr;
+wire [16:0] bk_addr;
+wire [15:0] bk_data;
+wire [15:0] bk_q;
+
+save_handler save_handler (
+    .clk_74a(clk_74a),
+    .clk_sys(clk_sys),
+    .reset(~reset_n),
+
+    .bridge_rd(bridge_rd),
+    .bridge_wr(bridge_wr),
+    .bridge_endian_little(bridge_endian_little),
+    .bridge_addr(bridge_addr),
+    .bridge_wr_data(bridge_wr_data),
+    .bridge_rd_data(save_bridge_rd_data),
+
+    .bk_wr(bk_wr),
+    .bk_addr(bk_addr),
+    .bk_data(bk_data),
+    .bk_q(bk_q),
+
+    .cart_download(cart_download)
+);
+
+// Handle datatable directly - report save size to APF
+always_ff @(posedge clk_74a) begin
+    if (~reset_n) begin
+        datatable_addr <= 0;
+        datatable_data <= 0;
+        datatable_wren <= 0;
+    end else begin
+        // Data slot index 1 (save RAM slot), not id 1
+        datatable_addr <= 1 * 2 + 1;
+        datatable_wren <= 1;
+        datatable_data <= save_size;
+    end
+end
+
+///////////////////////////////////////////////////
+// Save RAM - Dual Port RAM
+// Port A: Genesis cart access (0x200000-0x3FFFFF)
+// Port B: APF save/load via save_handler
+///////////////////////////////////////////////////
+
+wire [15:0] sram_addr_a;
+wire [15:0] sram_din_a;
+wire [15:0] sram_dout_a;
+wire        sram_we_a;
+wire        sram_rd_a;
+
+// 64KB save RAM (matching data.json definition)
+dpram #(16, 16) save_ram (
+    .clock(clk_sys),
+
+    // Port A: Genesis cart SRAM access
+    .address_a(sram_addr_a),
+    .data_a(sram_din_a),
+    .wren_a(sram_we_a),
+    .byteena_a(2'b11),
+    .q_a(sram_dout_a),
+
+    // Port B: Save handler (APF bridge)
+    .address_b(bk_addr[15:0]),
+    .data_b(bk_data),
+    .wren_b(bk_wr)
+);
+
+// Read port B data
+assign bk_q = save_ram.ram[bk_addr[15:0]];
+
+///////////////////////////////////////////////////
 // SDRAM Controller
 ///////////////////////////////////////////////////
 
-wire [24:1] rom_addr;
-wire [15:0] rom_data;
-wire [15:0] rom_wdata;
-wire  [1:0] rom_be;
-wire rom_req, rom_ack, rom_we;
+// SDRAM multiplexing - during download, ioctl controls SDRAM
+// During normal operation, cart interface controls SDRAM
+wire [24:1] sdram_addr = cart_download ? ioctl_addr[24:1] : {1'b0, cart_addr};
+wire [15:0] sdram_din  = cart_download ? {ioctl_data[7:0], ioctl_data[15:8]} : cart_data_wr;
+wire [15:0] sdram_dout;
+wire        sdram_we   = cart_download ? ioctl_wr : (cart_cs & (cart_lwr | cart_uwr));
+wire        sdram_req  = cart_download ? ioctl_wr : (cart_cs & cart_oe);
+wire  [1:0] sdram_be   = cart_download ? 2'b11 : {cart_uwr, cart_lwr};
 
 sdram sdram (
     .init(~pll_core_locked),
     .clk(clk_ram),
 
-    // ROM loader port
-    .addr0(ioctl_addr[24:1]),
-    .din0({ioctl_data[7:0], ioctl_data[15:8]}),
-    .dout0(),
-    .wrl0(1),
-    .wrh0(1),
-    .req0(ioctl_wr),
+    // ROM loader port (multiplexed with cart access)
+    .addr0(sdram_addr),
+    .din0(sdram_din),
+    .dout0(sdram_dout),
+    .wrl0(sdram_we & sdram_be[0]),
+    .wrh0(sdram_we & sdram_be[1]),
+    .req0(sdram_req),
     .ack0(),
 
-    // Core ROM access port
-    .addr1(rom_addr),
-    .din1(rom_wdata),
-    .dout1(rom_data),
-    .wrl1(rom_we & rom_be[0]),
-    .wrh1(rom_we & rom_be[1]),
-    .req1(rom_req),
-    .ack1(rom_ack),
+    // Port 1 unused for now (could be used for save RAM later)
+    .addr1(24'h0),
+    .din1(16'h0),
+    .dout1(),
+    .wrl1(1'b0),
+    .wrh1(1'b0),
+    .req1(1'b0),
+    .ack1(),
 
     // SDRAM physical interface
     .SDRAM_DQ(dram_dq),
@@ -473,7 +555,17 @@ sdram sdram (
 // Audio Output (I2S)
 ///////////////////////////////////////////////////
 
-wire [15:0] AUDIO_L, AUDIO_R;
+// Audio chip selection
+// md_board provides both YM3438 and YM2612 outputs pre-mixed with PSG
+wire [15:0] A_L;        // YM3438 + PSG (16-bit signed)
+wire [15:0] A_R;
+wire [17:0] A_L_2612;   // YM2612 + PSG (18-bit signed)
+wire [17:0] A_R_2612;
+
+// Select audio based on FM chip setting (cs_fm_chip: 0=YM2612, 1=YM3438)
+// Note: YM3438 is the authentic chip, YM2612 is the emulation mode
+wire [15:0] AUDIO_L = cs_fm_chip ? A_L : A_L_2612[17:2];  // Scale 18-bit to 16-bit
+wire [15:0] AUDIO_R = cs_fm_chip ? A_R : A_R_2612[17:2];
 
 sound_i2s #(
     .CHANNEL_WIDTH(16),
@@ -494,19 +586,135 @@ sound_i2s #(
 // Video Output
 ///////////////////////////////////////////////////
 
+// Color lookup table - expand 4-bit Genesis RGB to 8-bit
+wire [7:0] color_lut[16] = '{
+    8'd0,   8'd27,  8'd49,  8'd71,
+    8'd87,  8'd103, 8'd119, 8'd130,
+    8'd146, 8'd157, 8'd174, 8'd190,
+    8'd206, 8'd228, 8'd255, 8'd255
+};
+
 wire [7:0] r, g, b;
 wire hs, vs;
-wire hblank, vblank;
+wire hblank, vblank_sys;
 wire ce_pix;
 
-// TODO: Video processing and output
-assign video_rgb_clock = clk_sys;
-assign video_rgb_clock_90 = clk_sys;
-assign video_rgb = {r, g, b};
-assign video_de = ~(hblank | vblank);
-assign video_hs = hs;
-assign video_vs = vs;
+// Video mode signals from VDP
+wire field;
+wire interlaced;
+wire [1:0] resolution;  // 00=256x224, 01=320x224, 10=256x240, 11=320x240
+
+// Assign resolution based on VDP mode flags
+assign resolution = {vdp_m2, vdp_rs1};  // m2=V30 mode, rs1=H40 mode
+assign interlaced = vdp_intfield;
+assign field = vdp_intfield;
+assign hblank = ~vdp_de_h;
+assign vblank_sys = ~vdp_de_v;
+assign ce_pix = vdp_hclk1;
+
+// Video output registers
+reg video_de_reg;
+reg video_hs_reg;
+reg video_vs_reg;
+reg [23:0] video_rgb_reg;
+
+// Current pixel clocks (will be set by PLL in future)
+reg current_pix_clk;
+reg current_pix_clk_90;
+
+// For now, use system clock (will be replaced with proper video clocks)
+wire clk_vid_256 = clk_sys;
+wire clk_vid_256_90deg = clk_sys;
+wire clk_vid_320 = clk_sys;
+wire clk_vid_320_90deg = clk_sys;
+
+always @(*) begin
+    if(resolution == 2'b00 || resolution == 2'b10) begin
+        // 256-width modes
+        current_pix_clk <= clk_vid_256;
+        current_pix_clk_90 <= clk_vid_256_90deg;
+    end else begin
+        // 320-width modes
+        current_pix_clk <= clk_vid_320;
+        current_pix_clk_90 <= clk_vid_320_90deg;
+    end
+end
+
+assign video_rgb_clock = current_pix_clk;
+assign video_rgb_clock_90 = current_pix_clk_90;
+assign video_de = video_de_reg;
+assign video_hs = video_hs_reg;
+assign video_vs = video_vs_reg;
+assign video_rgb = video_rgb_reg;
 assign video_skip = 0;
+
+reg hs_prev;
+reg vs_prev;
+
+// Composite video filter
+wire hs_c, vs_c, hblank_c, vblank_c;
+wire [7:0] red, green, blue;
+
+cofi cofi_inst (
+    .clk(clk_sys),
+    .pix_ce(ce_pix),
+    .enable(cs_composite_enable),
+
+    .hblank(hblank),
+    .vblank(vblank_sys),
+    .hs(hs),
+    .vs(vs),
+    .red(color_lut[r[7:4]]),
+    .green(color_lut[g[7:4]]),
+    .blue(color_lut[b[7:4]]),
+
+    .hblank_out(hblank_c),
+    .vblank_out(vblank_c),
+    .hs_out(hs_c),
+    .vs_out(vs_c),
+    .red_out(red),
+    .green_out(green),
+    .blue_out(blue)
+);
+
+always @(posedge current_pix_clk) begin
+    reg vblank_line = 0;
+    video_de_reg <= 0;
+
+    if (vs_c) begin
+        // On vsync, encode interlace/field info in LSBs
+        video_rgb_reg[23:3] <= 'd0;
+        video_rgb_reg[3] <= ~field;
+        video_rgb_reg[2] <= field;
+        video_rgb_reg[1] <= interlaced;
+        video_rgb_reg[0] <= 0;
+    end
+
+    // Set Video Mode by Index for APF scaler
+    case(resolution)
+        2'b00: begin video_rgb_reg <= 24'h0;                end  // [0] 256 x 224
+        2'b01: begin video_rgb_reg <= {11'd1, 10'b0, 3'b0}; end  // [1] 320 x 224
+        2'b10: begin video_rgb_reg <= {11'd2, 10'b0, 3'b0}; end  // [2] 256 x 240
+        2'b11: begin video_rgb_reg <= {11'd3, 10'b0, 3'b0}; end  // [3] 320 x 240
+    endcase
+
+    if (~(vblank_line || hblank_c)) begin
+        video_de_reg <= 1;
+        video_rgb_reg[23:16] <= red;
+        video_rgb_reg[15:8]  <= green;
+        video_rgb_reg[7:0]   <= blue;
+    end
+
+    video_hs_reg <= ~hs_prev && hs_c;
+    video_vs_reg <= ~vs_prev && vs_c;
+    hs_prev <= hs_c;
+    vs_prev <= vs_c;
+
+    // Capture vblank at hsync to avoid truncation artifacts
+    if (~hs_prev && hs_c) begin
+        vblank_line <= vblank_c;
+    end
+end
 
 ///////////////////////////////////////////////////
 // Controller Mapping
@@ -687,8 +895,23 @@ md_io md_io (
     .port2_dir(PB_d)
 );
 
-// TODO: Cartridge interface - connect to SDRAM
-assign cart_data_en = 1'b0;  // Placeholder
+///////////////////////////////////////////////////
+// Cartridge Interface - SDRAM + SRAM Connection
+///////////////////////////////////////////////////
+
+// Genesis SRAM typically appears at 0x200000-0x3FFFFF (even bytes)
+// Cart addresses are word-addressed, so 0x200000>>1 = 0x100000 = bit 20
+wire sram_active = (cart_addr[22:20] == 3'b001);  // 0x200000-0x3FFFFF range
+
+// SRAM port A connections (Genesis cart access)
+assign sram_addr_a = cart_addr[15:0];
+assign sram_din_a = cart_data_wr;
+assign sram_we_a = sram_active & cart_cs & (cart_lwr | cart_uwr) & ~cart_download;
+assign sram_rd_a = sram_active & cart_cs & cart_oe & ~cart_download;
+
+// Multiplex cart data between SDRAM (ROM) and SRAM (save data)
+wire [15:0] cart_data_muxed = sram_active ? sram_dout_a : sdram_dout;
+assign cart_data_en = ~cart_download & cart_cs & cart_oe;
 
 // Nuked-MD board
 md_board md_board (
@@ -711,7 +934,7 @@ md_board md_board (
 
     // Cart
     .M3(1'b1),  // Genesis mode
-    .cart_data(16'h0),  // TODO: Connect to SDRAM
+    .cart_data(cart_data_muxed),
     .cart_data_en(cart_data_en),
     .cart_address(cart_addr),
     .cart_cs(cart_cs),
@@ -741,10 +964,10 @@ md_board md_board (
     .V_CS(),
 
     // Audio
-    .A_L(AUDIO_L),
-    .A_R(AUDIO_R),
-    .A_L_2612(),
-    .A_R_2612(),
+    .A_L(A_L),
+    .A_R(A_R),
+    .A_L_2612(A_L_2612),
+    .A_R_2612(A_R_2612),
     .MOL(MOL),
     .MOR(MOR),
     .MOL_2612(),
@@ -799,6 +1022,9 @@ always @(*) begin
     casex(bridge_addr)
     32'hF8xxxxxx: begin
         bridge_rd_data <= cmd_bridge_rd_data;
+    end
+    32'h6xxxxxxx: begin
+        bridge_rd_data <= save_bridge_rd_data;
     end
     default: begin
         bridge_rd_data <= 0;

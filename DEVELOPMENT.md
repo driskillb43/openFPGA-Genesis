@@ -55,11 +55,12 @@ The main wrapper connects Nuked-MD to the Analogue Pocket:
 - ✅ md_board instantiation
 
 **TODO (Next Phase):**
-- ⚠️ Cart interface - Connect SDRAM to cart_data input
-- ⚠️ Save RAM handling
-- ⚠️ Video processing/scaling
-- ⚠️ Audio mixing (YM3438 vs YM2612 selection)
-- ⚠️ Region detection from ROM header
+- ✅ Cart interface - SDRAM connected to cart_data (lines 500-547, 766-782)
+- ✅ Save RAM handling - Implemented with dual-port RAM + save_handler.sv
+- ✅ Video processing/scaling - Color LUT, COFI filter, mode detection
+- ✅ Audio mixing (YM3438 vs YM2612 selection) - FM chip selection implemented
+- ⚠️ PLL reconfiguration for proper video clocks
+- ⚠️ Region detection from ROM header (optional)
 - ⚠️ TMSS ROM loading (optional)
 
 ### 3. Nuked-MD Core Files
@@ -99,25 +100,151 @@ All 23 original Nuked-MD Verilog files are included:
    - Clock domain crossings
    - Timing constraints violations
 
-### Phase 3: Cart/ROM Interface
+### Phase 3: Cart/ROM Interface ✅ COMPLETE
 
-The most critical missing piece is connecting the SDRAM to the Nuked-MD core's cart interface:
+The SDRAM to cart interface has been implemented using the multiplexing pattern from both GBC and SNES reference cores:
 
 ```systemverilog
-// In core_top.sv around line 750
-// TODO: Replace placeholder with actual SDRAM cart interface
-assign cart_data_en = 1'b0;  // Currently disabled
-
-// Need to implement:
-// - Map cart_addr to SDRAM addresses
-// - Handle cart_cs, cart_oe timing
-// - Implement cart_dtack handshaking
-// - Connect cart_data from SDRAM read data
+// In core_top.sv lines 500-547
+// SDRAM multiplexing - during download, ioctl controls SDRAM
+// During normal operation, cart interface controls SDRAM
+wire [24:1] sdram_addr = cart_download ? ioctl_addr[24:1] : {1'b0, cart_addr};
+wire [15:0] sdram_din  = cart_download ? {ioctl_data[7:0], ioctl_data[15:8]} : cart_data_wr;
+wire [15:0] sdram_dout;
+wire        sdram_we   = cart_download ? ioctl_wr : (cart_cs & (cart_lwr | cart_uwr));
+wire        sdram_req  = cart_download ? ioctl_wr : (cart_cs & cart_oe);
 ```
 
-**Reference:** Look at the MiSTer port's cartridge.sv for guidance.
+**Implementation notes:**
+- Address multiplexing: Download uses ioctl_addr, runtime uses cart_addr
+- Data byte swapping for big-endian Genesis ROMs
+- Write enable properly muxed between loader and cart writes
+- Cart data enable only active during cart reads (not download)
 
-### Phase 4: Testing
+### Phase 4: Save RAM Implementation ✅ COMPLETE
+
+Battery-backed SRAM support has been implemented following the GBC/SNES pattern:
+
+**New Files:**
+- `src/fpga/core/save_handler.sv` - Handles APF bridge communication for save data
+
+**Implementation Details:**
+
+1. **Dual-Port RAM (64KB)** - core_top.sv lines 479-497
+   - Port A: Genesis cart access at 0x200000-0x3FFFFF
+   - Port B: APF save/load operations via save_handler
+
+2. **Address Space Detection** - core_top.sv lines 770-778
+   ```systemverilog
+   // Genesis SRAM typically appears at 0x200000-0x3FFFFF
+   wire sram_active = (cart_addr[22:20] == 3'b001);
+   ```
+
+3. **Data Multiplexing** - core_top.sv line 781
+   ```systemverilog
+   // Multiplex between ROM (SDRAM) and SRAM
+   wire [15:0] cart_data_muxed = sram_active ? sram_dout_a : sdram_dout;
+   ```
+
+4. **APF Integration:**
+   - data_loader at address 0x6xxxxxxx for writing saves
+   - data_unloader at address 0x6xxxxxxx for reading saves
+   - datatable reports 64KB size to APF (matching data.json)
+   - Bridge read mux handles 0x6xxxxxxx address space
+
+**Notes:**
+- 64KB is the standard maximum SRAM size for Genesis games
+- Most games use 8KB-32KB, but 64KB accommodates all titles
+- SRAM is only active when cart addresses 0x200000-0x3FFFFF
+- Per-game SRAM size detection could be added via ROM header parsing
+
+### Phase 5: Video Processing ✅ PARTIAL
+
+Video output has been implemented following the openFPGA-Genesis pattern:
+
+**Implemented:**
+- ✅ Color lookup table (4-bit → 8-bit RGB expansion)
+- ✅ Composite video filter (cofi.sv)
+- ✅ Video mode detection and encoding
+- ✅ Proper sync signal handling
+- ✅ Blanking signal processing with vblank latching
+
+**TODO:**
+- ⚠️ **PLL Reconfiguration Required** - The PLL needs to be regenerated in Quartus to output video clocks:
+  - `clk_vid_256` @ ~6.71 MHz for 256-width modes
+  - `clk_vid_320` @ ~8.39 MHz for 320-width modes
+  - 90-degree phase-shifted versions of each
+  - Currently using system clock as temporary workaround
+
+**Video Signal Flow:**
+```
+md_board VDP outputs (4-bit RGB + sync)
+  → Color LUT expansion
+  → COFI composite filter (optional)
+  → Video mode encoding
+  → Video output registers (clocked by pixel clock)
+  → APF scaler
+```
+
+**Resolution Support:**
+- 256 x 224 (most common)
+- 320 x 224 (high-res mode)
+- 256 x 240 (PAL)
+- 320 x 240 (PAL high-res)
+
+### Phase 5a: Audio Processing ✅ COMPLETE
+
+Audio output has been implemented with FM chip selection support:
+
+**Implemented:**
+- ✅ YM3438 audio output (authentic chip)
+- ✅ YM2612 audio output (emulation mode)
+- ✅ FM chip selection via interact.json setting
+- ✅ Automatic PSG mixing (handled by md_board)
+- ✅ I2S audio output
+
+**Implementation Details:**
+
+1. **Audio Sources** - core_top.sv lines 558-568
+   ```systemverilog
+   // md_board provides both YM3438 and YM2612 outputs pre-mixed with PSG
+   wire [15:0] A_L;        // YM3438 + PSG (16-bit signed)
+   wire [15:0] A_R;
+   wire [17:0] A_L_2612;   // YM2612 + PSG (18-bit signed)
+   wire [17:0] A_R_2612;
+
+   // Select audio based on FM chip setting (cs_fm_chip: 0=YM2612, 1=YM3438)
+   wire [15:0] AUDIO_L = cs_fm_chip ? A_L : A_L_2612[17:2];
+   wire [15:0] AUDIO_R = cs_fm_chip ? A_R : A_R_2612[17:2];
+   ```
+
+2. **Audio Chip Selection**
+   - Controlled by `cs_fm_chip` setting at address 0x00A00000
+   - 0 = YM2612 (emulation mode with slightly different tone)
+   - 1 = YM3438 (authentic Genesis 2 chip)
+
+3. **Audio Mixing**
+   - Nuked-MD core handles all mixing internally
+   - Both FM chip outputs already include PSG mix
+   - 18-bit YM2612 output scaled to 16-bit by dropping 2 LSBs
+
+**Audio Signal Flow:**
+```
+md_board audio synthesis
+  → YM3438 (A_L/A_R) or YM2612 (A_L_2612/A_R_2612)
+  → Both pre-mixed with PSG
+  → Chip selection mux (based on cs_fm_chip)
+  → I2S output module
+  → Analogue Pocket DAC
+```
+
+**Notes:**
+- YM3438 is more accurate to later Genesis/Mega Drive models
+- YM2612 emulation may have subtle tone differences
+- PSG (Programmable Sound Generator) audio is included in both modes
+- No additional audio filtering implemented (could add LPF/HPF in future)
+
+### Phase 6: Testing
 
 1. **Minimal test:**
    - Compile and generate .rbf
