@@ -1,0 +1,3 @@
+[submodule "src/fpga/core/rtl"]
+	path = src/fpga/core/rtl
+	url = https://github.com/nukeykt/Nuked-MD-FPGA.git
