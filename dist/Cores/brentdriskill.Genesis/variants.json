@@ -3,11 +3,11 @@
         "magic": "APF_VER_1",
         "variant_list": [
             {
-                "name": "MegaDrive (NTSC)",
+                "name": "Mega Drive (NTSC)",
                 "id": 0,
                 "platform": {
                     "category": "consoles",
-                    "name": "MegaDrive",
+                    "name": "Mega Drive",
                     "manufacturer": "Sega",
                     "year": 1988
                 }
@@ -23,11 +23,11 @@
                 }
             },
             {
-                "name": "MegaDrive (PAL)",
+                "name": "Mega Drive (PAL)",
                 "id": 2,
                 "platform": {
                     "category": "consoles",
-                    "name": "MegaDrive",
+                    "name": "Mega Drive",
                     "manufacturer": "Sega",
                     "year": 1990
                 }

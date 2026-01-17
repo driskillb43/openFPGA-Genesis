@@ -3,11 +3,11 @@
         "magic": "APF_VER_1",
         "metadata": {
             "platform_ids": ["megadrive"],
-            "shortname": "MegaDrive",
-            "description": "Sega Mega Drive / Genesis - Cycle-accurate hardware implementation based on Nuked-MD",
+            "shortname": "Genesis",
+            "description": "Sega Genesis / Mega Drive - Cycle-accurate hardware implementation based on Nuked-MD",
             "author": "brentdriskill",
-            "url": "https://github.com/brentdriskill/openFPGA-MegaDrive",
-            "version": "0.1.0",
+            "url": "https://github.com/brentdriskill/openFPGA-Genesis",
+            "version": "0.1.0-alpha",
             "date_release": "2025-01-01"
         },
         "framework": {

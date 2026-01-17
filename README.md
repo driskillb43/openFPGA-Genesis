@@ -1,10 +1,12 @@
-# openFPGA-MegaDrive
+# openFPGA-Genesis
 
-Cycle-accurate Sega Mega Drive / Genesis core for Analogue Pocket, based on [Nuked-MD-FPGA](https://github.com/nukeykt/Nuked-MD-FPGA).
+> ⚠️ **WORK IN PROGRESS** - This core is currently under development and **not yet functional**. It has not been compiled or tested on hardware.
+
+Cycle-accurate Sega Genesis / Mega Drive core for Analogue Pocket, based on [Nuked-MD-FPGA](https://github.com/nukeykt/Nuked-MD-FPGA).
 
 ## About
 
-This is a port of the Nuked-MD FPGA core to the Analogue Pocket platform. The goal is to provide the most accurate Mega Drive emulation possible using cycle-accurate implementations of the original hardware chips.
+This is a port of the Nuked-MD FPGA core to the Analogue Pocket platform. The goal is to provide the most accurate Genesis / Mega Drive emulation possible using cycle-accurate implementations of the original hardware chips.
 
 ### Nuked-MD Core
 
@@ -22,14 +24,27 @@ All chip implementations are based on die photographs and hardware reverse engin
 
 ## Status
 
-🚧 **Work in Progress** - This core is currently under development.
+| Component | Status |
+|-----------|--------|
+| Core Integration | ✅ Complete |
+| Video Processing | ✅ Complete |
+| Audio Mixing | ✅ Complete |
+| Save RAM | ✅ Complete |
+| Controller I/O | ✅ Complete |
+| **Compilation** | ❌ Not Started |
+| **Hardware Testing** | ❌ Not Started |
+
+**Next Steps:**
+1. Compile with Intel Quartus Prime (requires x86-64 system)
+2. Test on Analogue Pocket hardware
+3. Debug and optimize
 
 ## Cloning
 
 This project uses git submodules for the Nuked-MD core files. Clone with:
 
 ```bash
-git clone --recursive https://github.com/YOUR-USERNAME/openFPGA-MegaDrive.git
+git clone --recursive https://github.com/YOUR-USERNAME/openFPGA-Genesis.git
 ```
 
 Or if you've already cloned the repository:
@@ -41,10 +56,10 @@ git submodule update --init --recursive
 ## Directory Structure
 
 ```
-openFPGA-MegaDrive/
+openFPGA-Genesis/
 ├── dist/                           # Distribution files for Analogue Pocket
 │   ├── Cores/
-│   │   └── brentdriskill.MegaDrive/
+│   │   └── brentdriskill.Genesis/
 │   │       ├── core.json          # Core metadata
 │   │       ├── input.json         # Controller configuration
 │   │       ├── video.json         # Video settings

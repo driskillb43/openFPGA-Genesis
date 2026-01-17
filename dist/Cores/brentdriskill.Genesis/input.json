@@ -7,7 +7,7 @@
                 "mappings": [
                     {
                         "id": 1,
-                        "name": "MegaDrive 3-Button",
+                        "name": "Genesis 3-Button",
                         "key": {
                             "dpad_up": "D-Pad Up",
                             "dpad_down": "D-Pad Down",
@@ -22,7 +22,7 @@
                     },
                     {
                         "id": 2,
-                        "name": "MegaDrive 6-Button",
+                        "name": "Genesis 6-Button",
                         "key": {
                             "dpad_up": "D-Pad Up",
                             "dpad_down": "D-Pad Down",
