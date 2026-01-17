@@ -100,6 +100,8 @@ openFPGA-Genesis/
 - **ogamespec** - FC1004 decap, reverse engineering
 - **andkorzh** - Reverse engineering
 - **HardWareMan** - YM2612 decap, reverse engineering
+- **agg23** - Prior Analogue Pocket porting
+- **ericlewis** - Prior Genesis port
 
 ## References
 
