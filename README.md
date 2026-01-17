@@ -24,6 +24,20 @@ All chip implementations are based on die photographs and hardware reverse engin
 
 🚧 **Work in Progress** - This core is currently under development.
 
+## Cloning
+
+This project uses git submodules for the Nuked-MD core files. Clone with:
+
+```bash
+git clone --recursive https://github.com/YOUR-USERNAME/openFPGA-MegaDrive.git
+```
+
+Or if you've already cloned the repository:
+
+```bash
+git submodule update --init --recursive
+```
+
 ## Directory Structure
 
 ```
@@ -45,7 +59,7 @@ openFPGA-MegaDrive/
 │   └── fpga/
 │       ├── apf/                   # Analogue Platform Framework files
 │       ├── core/                  # Core integration layer
-│       │   ├── rtl/              # Nuked-MD core files
+│       │   ├── rtl/              # Nuked-MD core files (git submodule)
 │       │   └── core_top.sv       # Main APF interface
 │       └── ap_core.qpf           # Quartus project
 └── README.md
