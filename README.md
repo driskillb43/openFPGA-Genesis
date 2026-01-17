@@ -44,7 +44,7 @@ All chip implementations are based on die photographs and hardware reverse engin
 This project uses git submodules for the Nuked-MD core files. Clone with:
 
 ```bash
-git clone --recursive https://github.com/YOUR-USERNAME/openFPGA-Genesis.git
+git clone --recursive https://github.com/driskillb43/openFPGA-Genesis.git
 ```
 
 Or if you've already cloned the repository:
@@ -59,7 +59,7 @@ git submodule update --init --recursive
 openFPGA-Genesis/
 ├── dist/                           # Distribution files for Analogue Pocket
 │   ├── Cores/
-│   │   └── brentdriskill.Genesis/
+│   │   └── driskillb43.Genesis/
 │   │       ├── core.json          # Core metadata
 │   │       ├── input.json         # Controller configuration
 │   │       ├── video.json         # Video settings

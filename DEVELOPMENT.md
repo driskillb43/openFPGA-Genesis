@@ -12,7 +12,7 @@ The project now has all the necessary scaffolding to begin compilation and testi
 ```
 openFPGA-Genesis/
 ├── dist/                           # Analogue Pocket distribution files
-│   ├── Cores/brentdriskill.Genesis/
+│   ├── Cores/driskillb43.Genesis/
 │   │   ├── core.json              ✅ Core metadata
 │   │   ├── input.json             ✅ Controller mappings (3 & 6-button)
 │   │   ├── video.json             ✅ Video modes (256/320 x 224/240)

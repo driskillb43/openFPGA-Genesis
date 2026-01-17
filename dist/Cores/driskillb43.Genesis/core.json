@@ -5,8 +5,8 @@
             "platform_ids": ["megadrive"],
             "shortname": "Genesis",
             "description": "Sega Genesis / Mega Drive - Cycle-accurate hardware implementation based on Nuked-MD",
-            "author": "brentdriskill",
-            "url": "https://github.com/brentdriskill/openFPGA-Genesis",
+            "author": "driskillb43",
+            "url": "https://github.com/driskillb43/openFPGA-Genesis",
             "version": "0.1.0-alpha",
             "date_release": "2025-01-01"
         },
