@@ -283,7 +283,7 @@ wire    [31:0]  savestate_maxloadsize;
 
 wire            savestate_start;
 wire            savestate_start_ack;
-wire            savestart_start_busy;
+wire            savestate_start_busy;
 wire            savestate_start_ok;
 wire            savestate_start_err;
 
@@ -496,11 +496,9 @@ dpram #(16, 16) save_ram (
     // Port B: Save handler (APF bridge)
     .address_b(bk_addr[15:0]),
     .data_b(bk_data),
-    .wren_b(bk_wr)
+    .wren_b(bk_wr),
+    .q_b(bk_q)
 );
-
-// Read port B data
-assign bk_q = save_ram.ram[bk_addr[15:0]];
 
 ///////////////////////////////////////////////////
 // SDRAM Controller
@@ -1009,11 +1007,6 @@ md_board md_board (
     .vdp_dma()
 );
 
-// Video blanking signals
-assign hblank = ~vdp_de_h;
-assign vblank = ~vdp_de_v;
-assign ce_pix = vdp_hclk1;
-
 ///////////////////////////////////////////////////
 // Bridge read data mux
 ///////////////////////////////////////////////////
@@ -1032,50 +1025,4 @@ always @(*) begin
     endcase
 end
 
-endmodule
-
-// Simple dual-port RAM module
-module dpram #(
-    parameter ADDRWIDTH = 8,
-    parameter DATAWIDTH = 8
-) (
-    input clock,
-    input [ADDRWIDTH-1:0] address_a,
-    input [DATAWIDTH-1:0] data_a,
-    input wren_a,
-    input [(DATAWIDTH/8)-1:0] byteena_a,
-    output reg [DATAWIDTH-1:0] q_a,
-
-    input [ADDRWIDTH-1:0] address_b,
-    input [DATAWIDTH-1:0] data_b,
-    input wren_b
-);
-
-reg [DATAWIDTH-1:0] ram[0:(1<<ADDRWIDTH)-1];
-
-always @(posedge clock) begin
-    if (wren_a) begin
-        if (byteena_a[0]) ram[address_a][7:0] <= data_a[7:0];
-        if (DATAWIDTH > 8 && byteena_a[1]) ram[address_a][15:8] <= data_a[15:8];
-    end
-    q_a <= ram[address_a];
-
-    if (wren_b) ram[address_b] <= data_b;
-end
-
-endmodule
-
-// Simple 3-stage synchronizer
-module synch_3 #(parameter WIDTH=1) (
-    input [WIDTH-1:0] in,
-    output [WIDTH-1:0] out,
-    input clk
-);
-reg [WIDTH-1:0] stage1, stage2, stage3;
-always @(posedge clk) begin
-    stage1 <= in;
-    stage2 <= stage1;
-    stage3 <= stage2;
-end
-assign out = stage3;
 endmodule

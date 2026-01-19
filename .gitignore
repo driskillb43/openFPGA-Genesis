@@ -9,6 +9,7 @@
 *.sld
 *.bak
 *.qar
+*.qarlog
 db/
 incremental_db/
 output_files/
@@ -19,6 +20,15 @@ greybox_tmp/
 *.jic
 *.jam
 *.stp
+
+# Quartus DSE (Design Space Explorer)
+dse/
+*_base.qsf
+*.dse
+*_assignment_defaults.qdf
+
+# Auto-generated build files
+apf/build_id.mif
 
 # Quartus generated
 *_generation_script*
@@ -46,6 +56,9 @@ Thumbs.db
 .vscode/
 .idea/
 *.sublime-*
+
+# Claude Code
+.claude/
 
 # Temporary files
 tmp/
